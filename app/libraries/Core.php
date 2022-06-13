@@ -17,11 +17,11 @@ class Core
     $url = $this->getUrl();
 
     // Look in BLL for first value [notice:null!!]
-    if (@file_exists('../app/controllers/' . ucwords($url[0]) . '.php')) {
+    if (@file_exists('../app/controllers/' . ucwords($url['path'][0]) . '.php')) {
       // If exists, set as controller
-      $this->currentController = ucwords($url[0]);
+      $this->currentController = ucwords($url['path'][0]);
       // Unset 0 Index
-      unset($url[0]);
+      unset($url['path'][0]);
     }
 
     // Require the controller
@@ -31,31 +31,38 @@ class Core
     $this->currentController = new $this->currentController;
 
     // Check for second part of url
-    if (isset($url[1])) {
+    if (isset($url['path'][1])) {
+
       // Check to see if method exists in controller
-      if (method_exists($this->currentController, $url[1])) {
-        $this->currentMethod = $url[1];
+      if (method_exists($this->currentController, $url['path'][1])) {
+        $this->currentMethod = $url['path'][1];
         // Unset 1 index
-        unset($url[1]);
+        unset($url['path'][1]);
       }
     }
 
     // Get params
-    $this->params = $url ? array_values($url) : [];
+    $this->params = $url['query'];
 
     // Call a callback with array of params
     call_user_func_array([$this->currentController, $this->currentMethod], $this->params);
   }
 
-  public function getUrl()
+  public function getUrl(): array
   {
     if (isset($_SERVER['REQUEST_URI'])) {
-      $url = rtrim($_SERVER['REQUEST_URI'], '/');
-      $url = filter_var($url, FILTER_SANITIZE_URL);
-      $url = explode('/', $url);
-      unset($url[0]);
-      $url = array_values($url);
-      return $url;
+      $url = parse_url($_SERVER['REQUEST_URI']);
+
+      $path = explode('/', $url['path']);
+
+      unset($path[0]);
+
+      parse_str($url['query'], $query);
+
+      return [
+        'path' => array_values($path),
+        'query' => $query,
+      ];
     }
   }
 }
